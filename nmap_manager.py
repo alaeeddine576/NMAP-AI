@@ -168,6 +168,8 @@ class NmapManager:
         except ImportError:
             print("[Warning] nmap_mcp_server not found or import error.")
             return True, "Skipped (Import Error)"
+        
+        
     def execute_pipeline(self, intent: str, target: str):
         print(f"\n--- New Request: '{intent}' on {target} ---")
         

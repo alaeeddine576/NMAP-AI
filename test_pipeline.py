@@ -12,7 +12,7 @@ def run_tests():
         {
             "name": "Medium Intent Test",
             "intent": "Scan ports for HTTP, FTP, SMTP and version detection Run malware scripts with faster timing and traceroute",
-            "target": "192.168.1.10"
+            "target": "192.168.3.1"
         },
         {
             "name": "Hard Intent Test",

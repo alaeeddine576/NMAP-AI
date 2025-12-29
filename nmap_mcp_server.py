@@ -47,7 +47,16 @@ def run_nmap_scan(command: str) -> str:
         print(f"Stdout: {result.stdout}")
         print(f"Stderr: {result.stderr}")
         
+       # ... (previous subprocess code) ...
+        
+        print(f"Return code: {result.returncode}")
+        
+        # --- FIX: Check for Nmap specific failure messages even if return code is 0 ---
         if result.returncode == 0:
+            # Check if Nmap actually found the target
+            if "Failed to resolve" in result.stderr or "0 hosts up" in result.stdout:
+                 return f"FAILED (Target Error):\n{result.stderr}\n{result.stdout}"
+            
             return f"SUCCESS:\n{result.stdout}"
         else:
             return f"FAILED:\n{result.stderr}"

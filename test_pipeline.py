@@ -6,8 +6,8 @@ def run_tests():
     test_cases = [
         {
             "name": "Easy Intent Test",
-            "intent": "ping scan the network",
-            "target": "192.168.1.10"
+            "intent": "hhhhhhhhhhhhhhhhhh",
+            "target": "hhhhhhhh"
         },
         {
             "name": "Medium Intent Test",

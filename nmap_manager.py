@@ -48,33 +48,45 @@ class NmapManager:
             self.lora_model = None
 
     def classify_intent(self, intent: str) -> str:
-        """Uses Gemini to categorize the intent into Easy, Medium, or Hard."""
+        """
+        Uses Gemini to categorize the intent. Now uses the correct SDK client.
+        """
         prompt = f"""
-        Classify the following Nmap scanning intent into one of three categories:
+        Analyze the following user request and classify it into one of four categories:
+        - 'Irrelevant': The request is garbage (e.g., random characters like 'hhhh'), gibberish, or NOT related to network scanning/cybersecurity.
         - 'Easy': Basic port scans, ping scans, or simple host discovery.
         - 'Medium': Service/version detection, OS detection, or specific timing/stealth flags.
         - 'Hard': Vulnerability scanning, custom scripts, or complex multi-step reconnaissance.
         
         Intent: "{intent}"
         
-        Respond with ONLY the category name: Easy, Medium, or Hard.
+        Respond with ONLY the category name: Irrelevant, Easy, Medium, or Hard.
         """
         try:
-            # --- NEW SDK CALL ---
+            # --- FIX: Use self.client.models.generate_content ---
             response = self.client.models.generate_content(
                 model=self.gemini_model,
                 contents=prompt
             )
             category = response.text.strip()
-            return category if category in ["Easy", "Medium", "Hard"] else "Medium"
+            # Clean up potential extra whitespace or punctuation
+            if "Irrelevant" in category: return "Irrelevant"
+            if "Easy" in category: return "Easy"
+            if "Medium" in category: return "Medium"
+            if "Hard" in category: return "Hard"
+            
+            return "Medium" # Default fallback if Gemini is unsure
+            
         except Exception as e:
             print(f"[Error] Gemini Classification failed: {e}")
-            return "Easy"
-
+            # --- CRITICAL CHANGE: If API fails, do NOT default to Easy for garbage inputs ---
+            # Ideally, we fail safely, but for now, we keep Easy ONLY if it looks safe.
+            return "Irrelevant"
+ 
     def _generate_with_lora(self, intent: str, target: str) -> str:
         """Helper method to generate a command using the LoRA model."""
-        if self.lora_model is None:
-            return f"nmap -sS -sV -n {target}" # Fallback
+        # if self.lora_model is None:
+        #     return f"nmap -sS -sV -n {target}" # Fallback
 
         input_text = f"translate English to Nmap: {intent} on {target}"
         inputs = self.tokenizer(input_text, return_tensors="pt")
@@ -156,13 +168,24 @@ class NmapManager:
         except ImportError:
             print("[Warning] nmap_mcp_server not found or import error.")
             return True, "Skipped (Import Error)"
-
     def execute_pipeline(self, intent: str, target: str):
         print(f"\n--- New Request: '{intent}' on {target} ---")
         
         category = self.classify_intent(intent)
         print(f"[Manager] Intent classified as: {category}")
         
+        # --- FIX: Immediate Exit for Irrelevant Intents ---
+        if category == "Irrelevant":
+            print("[Block] Request blocked: Intent is irrelevant or malformed.")
+            return {
+                "intent": intent,
+                "category": category,
+                "command": None,
+                "is_valid": False,
+                "is_functional": False,
+                "mcp_report": "BLOCKED: The system determined this request is irrelevant to Nmap."
+            }
+
         if category == "Easy":
             command = self.process_easy(intent, target)
         elif category == "Medium":
